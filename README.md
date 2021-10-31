@@ -1,32 +1,37 @@
-# Set-up a network namespace for OpenVPN to unblock internet access for specific apps and services
+# OpenVPN Network Namespaces - openvpn-netns
 
-When your ISP is actively blocking certain websites, one can use a VPN to circumvent the blockage.  With this script, it is still possible to use the local network and a direct internet connection through the ISP, and still use the VPN connection to tunnel to blocked websites.
+When your ISP is actively blocking websites you need to access, one can use a VPN connection to circumvent the blockage.   With this **openvpn-netns** script, it is possible to use the local network and a direct internet connection through the ISP as usual, and additionally use a VPN connection to tunnel to blocked websites for affected apps and services.
+
+This is an example configuration running on a Raspberry Pi and is using Surfshark as the VPN provider, using the OpenVPN configuration files that are available from them.
+
+Note: This version of the script does require _root_ privileges to work.
+
+![openvpn-netns schematic](https://github.com/bjaan/openvpn-netns/blob/main/schematic.png?raw=true)
+
+As can be been seen above, the local port 32400 can still be made available on the local network (and ISP's IP-address through port forwarding)!
+
+For services requiring the VPN connection, it is also possible to make their port (port 9091 in the schematic above) available on the local network and ISP's IP-address, through a special _socat_ command and, optionally, a separate IP-address (see further below).
+
+## How it works
 
 Once the **openvpn-netns** script is installed, and the OpenVPN service is started, it will:
 1. open a VPN connection tunneled through the virtual _tun0_ network adapter, which  has a local IP-address in a different IP-range as the LAN, where all Internet bound traffic is routed through now. This is happening in a default OpenVPN installation already.
 2. set-up a Linux network namespace called _vpn_
 3. move the _tun0_ network adapter into the _vpn_ network namespace
 4. configure DSN servers for the _vpn_ network namespace
-5. optionally, create a virtual network adapter _macvlan0_ ([MACVLAN in Bridge mode](https://developers.redhat.com/blog/2018/10/22/introduction-to-linux-interfaces-for-virtual-networking#macvlan)) between the pythical LAN _eth0_ network adapter and the apps and services that need to access the Internet through the VPN tunnel.  It is will have a seperate IP-address which is accessible on the local network (Note: `ping` will not work on this IP-address, it will only have the exposed ports open).
+5. optionally, create a virtual network adapter _macvlan0_ ([MACVLAN in Bridge mode](https://developers.redhat.com/blog/2018/10/22/introduction-to-linux-interfaces-for-virtual-networking#macvlan)) between the pythical LAN _eth0_ network adapter and the apps and services that need to access the Internet through the VPN tunnel.  It is will have a seperate IP-address which is accessible on the local network (Note: `ping` will not work on this IP-address, it will only have the exposed ports open, and there is no ICMP Echo Requests service running either).
 
 When the OpenVPN service is stopped, the script will:
 1. close the active VPN connection and remove the _tun0_ network adapter
 2. remove the _vpn_ network namespace
-
-![openvpn-netns schematic](https://github.com/bjaan/openvpn-netns/blob/main/schematic.png?raw=true)
-
-As can been seen above, the local port 32400 can still be made available on the local network (and ISP's IP-address through port forwarding)!
-For services running requiring the VPN connection, it is also possible to make their port (port 9091 in the schematic above) available on the local network and ISP's IP-address, through a special _socat_ command (see further below).
-
-This is an example that is running on a Raspberry Pi and is using Surfshark as the VPN provider, using the OpenVPN 
-configuration files that are available from them.  This version of the scripts does require _root_ privileges to work.
+3. remove the _macvlan0_ network adapter
 
 ## Installation
 ### a. OpenVPN service installation
 
 1. First, install the OpenVPN service on Linux.
 
-   Typically using the `sudo apt-get install openvpn` command.  For complete instructions for the Raspberry Pi: https://openvpn.net/vpn-server-resources/install-openvpn-access-server-on-raspberry-pi/
+   Typically using the `sudo apt-get install openvpn` command.  For complete instructions for the Raspberry Pi are [here](https://openvpn.net/vpn-server-resources/install-openvpn-access-server-on-raspberry-pi/)
 
 2. Elevate your permissions to _root_ to be able to do the next steps.
 
@@ -114,6 +119,8 @@ configuration files that are available from them.  This version of the scripts d
    down /etc/openvpn/netns.sh
    ```
 
+11. Start the OpenVPN service: `sudo systemctl start openvpn`
+
 ## Running an app or service in the network namespace
 
 Note: the current version requires you to run as `root`. Suggestions on how run as regular are welcome!
@@ -136,6 +143,8 @@ Requires=openvpn.service
 
 [Service]
 ...
+User=pi
+Group=pi
 ExecStartPre=/bin/sleep 30
 ExecStart=/usr/bin/sudo /sbin/ip netns exec vpn /usr/bin/sudo -u $USER /opt/Service/service_launcher.sh
 ...
