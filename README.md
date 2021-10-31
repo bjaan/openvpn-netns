@@ -31,37 +31,39 @@ When the OpenVPN service is stopped, the script will:
 
 1. First, install the OpenVPN service on Linux.
 
-   Typically using the `sudo apt-get install openvpn` command.  For complete instructions for the Raspberry Pi are [here](https://openvpn.net/vpn-server-resources/install-openvpn-access-server-on-raspberry-pi/)
+   Typically using the `sudo apt-get install openvpn` command.  The complete instructions for the Raspberry Pi are [here](https://openvpn.net/vpn-server-resources/install-openvpn-access-server-on-raspberry-pi/)
 
 2. Elevate your permissions to _root_ to be able to do the next steps.
 
    `sudo -i`
 
-3. Install configuration file for OpenVPN that will allow it to connect the VPN provider; for Surfshark these can be downloaded [here](https://my.surfshark.com/vpn/manual-setup/main) on _Locations_ tab.
+3. Install the configuration file for OpenVPN that will allow it to connect the VPN provider; for Surfshark these can be downloaded [here](https://my.surfshark.com/vpn/manual-setup/main) on _Locations_ tab.
 
 
    Download, e.g. with `wget`, and save the selected configuration under the `/etc/openvpn/` folder.
-   Make sure that the name configuration file ends with the `.conf`, `/etc/openvpn/ch-zur.prod.surfshark.com_udp.conf`, that will allow OpenVPN to find it automatically, however we will still use point directly to it in the next steps.
+   Make sure that the name configuration file ends with the `.conf`, e.g. `/etc/openvpn/ch-zur.prod.surfshark.com_udp.conf`, that will allow OpenVPN to find it automatically, however we will still use point directly to it in the next steps.
 
-4. Create a credentials file for OpenVPN, according to your VPN provider's instructions; for Surfshark this can be set-up on the _Credentials_ tab on [the same page](https://my.surfshark.com/vpn/manual-setup/main)
+4. Create a credentials file for OpenVPN, according to your VPN provider's instructions; for Surfshark this can be set-up on the _Credentials_ tab on [the same page](https://my.surfshark.com/vpn/manual-setup/main).
+
    These commands will create it under `/etc/openvpn/credentials.txt`
    ```sh
    echo "CHANGE TO YOUR USERNAME" >> /etc/openvpn/credentials.txt
    echo "CHANGE TO YOUR PASSWORD" >> /etc/openvpn/credentials.txt
    ```
 
-5. Point to configuration file in service file.  Typically in a systemd-based Linux, the configuration file for the OpenVPN service is located at `/etc/systemd/system/openvpn.service`.
-   We need to update the `ExecStart` setting the `[Service]` section to make sure the OpenVPN service will use the correct configuration file, for `/etc/openvpn/ch-zur.prod.surfshark.com_udp.conf` this would become:
+5. Next. point to the OpenVPN configuration file in OpenVPN service file.  Typically in a systemd-based Linux, the service file for the OpenVPN service is located is `/etc/systemd/system/openvpn.service`.
+
+   We need to update the `ExecStart` line in the `[Service]` section to make sure the OpenVPN service will use the selected configuration file.  E.g. for `/etc/openvpn/ch-zur.prod.surfshark.com_udp.conf` this would become:
 
    ```ini
    ExecStart=/usr/sbin/openvpn --config /etc/openvpn/ch-zur.prod.surfshark.com_udp.conf
    ```
 
-6. Test if your VPN connection is working by starting the OpenVPN service: `sudo systemctl start openvpn`.  The whole host should now be connected through the VPN; see through `traceroute www.google.com` that it lists the VPN provider's domain names. Stop the service before proceeding `sudo systemctl start openvpn`
+6. Test if your VPN connection is working by starting the OpenVPN service: e.g. `sudo systemctl start openvpn`.  The whole host Internet access should now go through the VPN; see if the `traceroute www.google.com` command lists the VPN provider's domain names. Stop the service before proceeding `sudo systemctl start openvpn`
 
 ### b. Setting up the OpenVPN network namespace
 
-7. Reconfigure OpenVPN service file further, so that it has to permissions to set-up network namespace, see first configuration in step 5 above, further with these lines in the `[Service]` section:
+7. Reconfigure OpenVPN service file further, so that it has to permissions to set-up network namespace (the same file as in step 5 above) further with these lines in the `[Service]` section:
 
    ```ini
    CapabilityBoundingSet=CAP_CHOWN CAP_DAC_OVERRIDE CAP_DAC_READ_SEARCH CAP_FOWNER CAP_FSETID CAP_KILL CAP_SETGID CAP_SETUID CAP_SETPCAP CAP_LINUX_IMMUTABLE CAP_NET_BIND_SERVICE
@@ -80,31 +82,31 @@ When the OpenVPN service is stopped, the script will:
 9. To enable the optional _macvlan0_ network adapter, which allows to access exposed ports on services in the _vpn_ network namespace, though a separate IP-address.  Uncomment the following lines, by removing the first # and space after it:
 
 ```sh
-                # echo "add macvlan0 interface and link it to eth0 interface as bridge"
-                # ip link add macvlan0 link eth0 type macvlan mode bridge
-                # echo "put macvlan0 interface into netns vpn"
-                # ip link set macvlan0 netns vpn
-                # echo "enable macvlan0 interface in netns vpn"
-                # ip netns exec vpn ip link set macvlan0 up
-                # echo "configure macvlan0 interface with 192.168.0.50 in netns vpn"
-                # ip netns exec vpn ip addr add 192.168.0.50/24 dev macvlan0
+# echo "add macvlan0 interface and link it to eth0 interface as bridge"
+# ip link add macvlan0 link eth0 type macvlan mode bridge
+# echo "put macvlan0 interface into netns vpn"
+# ip link set macvlan0 netns vpn
+# echo "enable macvlan0 interface in netns vpn"
+# ip netns exec vpn ip link set macvlan0 up
+# echo "configure macvlan0 interface with 192.168.0.50 in netns vpn"
+# ip netns exec vpn ip addr add 192.168.0.50/24 dev macvlan0
 ```
 
    Change the IP-address on which this new network adapter _macvlan0_ will listen in the last two lines, it must be in the local network's IP-range - e.g. 192.168.1.236:
 
-   This will change into
+   These lines will look like:
 ```sh
-                echo "add macvlan0 interface and link it to eth0 interface as bridge"
-                ip link add macvlan0 link eth0 type macvlan mode bridge
-                echo "put macvlan0 interface into netns vpn"
-                ip link set macvlan0 netns vpn
-                echo "enable macvlan0 interface in netns vpn"
-                ip netns exec vpn ip link set macvlan0 up
-                echo "configure macvlan0 interface with 192.168.1.236 in netns vpn"
-                ip netns exec vpn ip addr add 192.168.1.236/24 dev macvlan0
+echo "add macvlan0 interface and link it to eth0 interface as bridge"
+ip link add macvlan0 link eth0 type macvlan mode bridge
+echo "put macvlan0 interface into netns vpn"
+ip link set macvlan0 netns vpn
+echo "enable macvlan0 interface in netns vpn"
+ip netns exec vpn ip link set macvlan0 up
+echo "configure macvlan0 interface with 192.168.1.236 in netns vpn"
+ip netns exec vpn ip addr add 192.168.1.236/24 dev macvlan0
 ```
 
-10. Modify the OpenVPN configuration file: the following lines have to be added, before the `<ca>` line or at the very end:
+10. Modify the OpenVPN configuration file (same file as in step 3): the following lines have to be added, before the `<ca>` line or at the very end:
 
    ```sh
    script-security 2
@@ -150,7 +152,7 @@ ExecStart=/usr/bin/sudo /sbin/ip netns exec vpn /usr/bin/sudo -u $USER /opt/Serv
 ...
 ```
 
-## Making an service available on the local network
+## Making a service available on the local network
 
 When an exposing a TCP-port that is only available within the network namespace, you might want to expose it on the local network.  It is automatically available through the IP-address of the _macvlan0_ adapter when it is used.
 
