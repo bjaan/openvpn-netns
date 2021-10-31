@@ -3,11 +3,11 @@
 When your ISP is actively blocking certain websites, one can use a VPN to circumvent the blockage.  With this script, it is still possible to use the local network and a direct internet connection through the ISP, and still use the VPN connection to tunnel to blocked websites.
 
 Once the **openvpn-netns** script is installed, and the OpenVPN service is started, it will:
-1. open a VPN connection tunneled through the virtual _tun0_ network adapter, which  has a local IP-address in a different IP-range as the LAN, where all Internet is routed through now. This is happening in a default installation already.
+1. open a VPN connection tunneled through the virtual _tun0_ network adapter, which  has a local IP-address in a different IP-range as the LAN, where all Internet bound traffic is routed through now. This is happening in a default OpenVPN installation already.
 2. set-up a Linux network namespace called _vpn_
-3. move the _tun0_ network adapter into the _vpn_ namespace
-4. configure DSN servers for the network namespace
-5. create a virtual network adapter _macvlan0_ ([MACVLAN in Bridge mode](https://developers.redhat.com/blog/2018/10/22/introduction-to-linux-interfaces-for-virtual-networking#macvlan)) between the pythical LAN _eth0_ network adapter and the apps and services that need to access the Internet through the VPN tunnel
+3. move the _tun0_ network adapter into the _vpn_ network namespace
+4. configure DSN servers for the _vpn_ network namespace
+5. optionally, create a virtual network adapter _macvlan0_ ([MACVLAN in Bridge mode](https://developers.redhat.com/blog/2018/10/22/introduction-to-linux-interfaces-for-virtual-networking#macvlan)) between the pythical LAN _eth0_ network adapter and the apps and services that need to access the Internet through the VPN tunnel.  It is will have a seperate IP-address which is accessible on the local network (Note: `ping` will not work on this IP-address, it will only have the exposed ports open).
 
 When the OpenVPN service is stopped, the script will:
 1. close the active VPN connection and remove the _tun0_ network adapter
@@ -72,7 +72,34 @@ configuration files that are available from them.  This version of the scripts d
 
 8. Copy the `netns.sh` to `/etc/openvpn/` and run `chmod +x /etc/openvpn/netns.sh` to allow it be executed.
 
-9. Modify the OpenVPN configuration file: the following lines have to be added, before the `<ca>` line or at the very end:
+9. To enable the optional _macvlan0_ network adapter, which allows to access exposed ports on services in the _vpn_ network namespace, though a separate IP-address.  Uncomment the following lines, by removing the first # and space after it:
+
+```sh
+                # echo "add macvlan0 interface and link it to eth0 interface as bridge"
+                # ip link add macvlan0 link eth0 type macvlan mode bridge
+                # echo "put macvlan0 interface into netns vpn"
+                # ip link set macvlan0 netns vpn
+                # echo "enable macvlan0 interface in netns vpn"
+                # ip netns exec vpn ip link set macvlan0 up
+                # echo "configure macvlan0 interface with 192.168.0.50 in netns vpn"
+                # ip netns exec vpn ip addr add 192.168.0.50/24 dev macvlan0
+```
+
+   Change the IP-address on which this new network adapter _macvlan0_ will listen in the last two lines, it must be in the local network's IP-range - e.g. 192.168.1.236:
+
+   This will change into
+```sh
+                echo "add macvlan0 interface and link it to eth0 interface as bridge"
+                ip link add macvlan0 link eth0 type macvlan mode bridge
+                echo "put macvlan0 interface into netns vpn"
+                ip link set macvlan0 netns vpn
+                echo "enable macvlan0 interface in netns vpn"
+                ip netns exec vpn ip link set macvlan0 up
+                echo "configure macvlan0 interface with 192.168.1.236 in netns vpn"
+                ip netns exec vpn ip addr add 192.168.1.236/24 dev macvlan0
+```
+
+10. Modify the OpenVPN configuration file: the following lines have to be added, before the `<ca>` line or at the very end:
 
    ```sh
    script-security 2
@@ -81,10 +108,10 @@ configuration files that are available from them.  This version of the scripts d
    writepid /run/openvpn/openvpn.pid
    route-noexec
    route-nopull
-   route-up /etc/openvpn/scripts/netns.sh
+   route-up /etc/openvpn/netns.sh
    ifconfig-noexec
-   up /etc/openvpn/scripts/netns.sh
-   down /etc/openvpn/scripts/netns.sh
+   up /etc/openvpn/netns.sh
+   down /etc/openvpn/netns.sh
    ```
 
 ## Running an app or service in the network namespace
@@ -116,9 +143,9 @@ ExecStart=/usr/bin/sudo /sbin/ip netns exec vpn /usr/bin/sudo -u $USER /opt/Serv
 
 ## Making an service available on the local network
 
-When an  exposing a TCP-port that is only available within the network namespace, you might want to expose it on the internet.
+When an exposing a TCP-port that is only available within the network namespace, you might want to expose it on the local network.  It is automatically available through the IP-address of the _macvlan0_ adapter when it is used.
 
-The following command will expose a TCP-port 9091:
+Otherwise, the following command will expose a TCP-port 9091 on the IP-address of the `eth0`-network adapter:
 
 ```sh
 sudo socat tcp-listen:9091,fork,reuseaddr exec:'ip netns exec vpn socat STDIO tcp-connect\:127.0.0.1\:9091',nofork &
@@ -137,21 +164,28 @@ sudo socat tcp-listen:9091,fork,reuseaddr exec:'ip netns exec vpn socat STDIO tc
     link/loopback 00:00:00:00:00:00 brd 00:00:00:00:00:00
 9: tun0: <POINTOPOINT,MULTICAST,NOARP,UP,LOWER_UP> mtu 1500 qdisc pfifo_fast state UNKNOWN mode DEFAULT group default qlen 100
     link/none
+32: macvlan0@if2: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc noqueue state UP mode DEFAULT group default qlen 1000
+    link/ether da:03:45:4c:4a:ef brd ff:ff:ff:ff:ff:ff link-netnsid 0
 ```
 ## Example output in the OpenVPN service log
 ```
 TUN/TAP device tun0 opened
 TUN/TAP TX queue length set to 100
-/etc/openvpn/scripts/netns.sh tun0 1500 1584 10.8.8.18 255.255.255.0 init
+/etc/openvpn/scripts/netns.sh tun0 1500 1584 10.9.9.218 255.255.255.0 init
 vpn netns script called - up
 Param 1 = tun0
 Param 2 = 1500
 Param 3 = 1584
-Param 4 = 10.8.8.18
+Param 4 = 10.9.9.218
 creating netns vpn
 putting openvpn in netns vpn
 configuring route for openvpn
 configuring netns vpn dsn settings
 enable loopback interface in netns vpn
+add macvlan0 interface and link it to eth0 interface as bridge
+put macvlan0 interface into netns vpn
+enable macvlan0 interface in netns vpn
+ip netns exec vpn ip link set macvlan0 up
+configure macvlan0 interface with 192.168.1.236 in netns vpn
 Initialization Sequence Completed
-`` 
+```

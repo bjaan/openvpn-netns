@@ -1,5 +1,7 @@
 #!/bin/sh
-#https://unix.stackexchange.com/questions/524052/how-to-connect-a-namespace-to-a-physical-interface-through-a-bridge-and-veth-pai
+# this OpenVPN up/down script gets called like this: 
+#    netns.sh tun0 1500 1584 10.8.8.18 255.255.255.0 init
+# based on several comments in https://unix.stackexchange.com/questions/524052/how-to-connect-a-namespace-to-a-physical-interface-through-a-bridge-and-veth-pai
 case $script_type in
         up)
                 echo "vpn netns script called - up"
@@ -24,14 +26,14 @@ case $script_type in
                 echo "nameserver 1.1.1.1" >> /etc/netns/vpn/resolv.conf
                 echo "enable loopback interface in netns vpn"
                 ip netns exec vpn ip link set lo up
-                echo "add macvlan0 interface and link it to eth0 interface as bridge"
-                ip link add macvlan0 link eth0 type macvlan mode bridge
-                echo "put macvlan0 interface into netns vpn"
-                ip link set macvlan0 netns vpn
-                echo "enable macvlan0 interface in netns vpn"
-                ip netns exec vpn ip link set macvlan0 up
-                echo "configure macvlan0 interface with 192.168.0.50 in netns vpn"
-                ip netns exec vpn ip addr add 192.168.0.50/24 dev macvlan0
+                # echo "add macvlan0 interface and link it to eth0 interface as bridge"
+                # ip link add macvlan0 link eth0 type macvlan mode bridge
+                # echo "put macvlan0 interface into netns vpn"
+                # ip link set macvlan0 netns vpn
+                # echo "enable macvlan0 interface in netns vpn"
+                # ip netns exec vpn ip link set macvlan0 up
+                # echo "configure macvlan0 interface with 192.168.0.50 in netns vpn"
+                # ip netns exec vpn ip addr add 192.168.0.50/24 dev macvlan0
                 ;;
         down)
                 echo "vpn netns script called - down"
