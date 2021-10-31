@@ -37,7 +37,7 @@ When the OpenVPN service is stopped, the script will:
 
    `sudo -i`
 
-3. Install the configuration file for OpenVPN that will allow it to connect the VPN provider; for Surfshark these can be downloaded [here](https://my.surfshark.com/vpn/manual-setup/main) on _Locations_ tab.
+3. Install the configuration file for OpenVPN that will allow it to connect the VPN provider; for Surfshark these can be downloaded [here](https://my.surfshark.com/vpn/manual-setup/main) on the _Locations_ tab.
 
 
    Download, e.g. with `wget`, and save the selected configuration under the `/etc/openvpn/` folder.
@@ -79,7 +79,7 @@ When the OpenVPN service is stopped, the script will:
 
 8. Copy the `netns.sh` to `/etc/openvpn/` and run `chmod +x /etc/openvpn/netns.sh` to allow it be executed.
 
-9. To enable the optional _macvlan0_ network adapter, which allows to access exposed ports on services in the _vpn_ network namespace, though a separate IP-address.  Uncomment the following lines, by removing the first # and space after it:
+9. To enable the optional _macvlan0_ network adapter, which allows to access exposed ports on services in the _vpn_ network namespace, though a separate IP-address, neet to modify the `netns.sh` file.  Uncomment the following lines, by removing the first # and space after it:
 
 ```sh
 # echo "add macvlan0 interface and link it to eth0 interface as bridge"
@@ -92,7 +92,7 @@ When the OpenVPN service is stopped, the script will:
 # ip netns exec vpn ip addr add 192.168.0.50/24 dev macvlan0
 ```
 
-   Change the IP-address on which this new network adapter _macvlan0_ will listen in the last two lines, it must be in the local network's IP-range - e.g. 192.168.1.236:
+   Change the IP-address on which this new network adapter _macvlan0_ will listen on the last two lines; it must be in the local network's IP-range - e.g. 192.168.1.236:
 
    These lines will look like:
 ```sh
@@ -125,7 +125,7 @@ ip netns exec vpn ip addr add 192.168.1.236/24 dev macvlan0
 
 ## Running an app or service in the network namespace
 
-Note: the current version requires you to run as `root`. Suggestions on how run as regular are welcome!
+Note: the current version requires you to run as `root`. Suggestions on how run as regular user are welcome!
 
 You need to `sudo` a call to `ip netns exec vpn`, which is then completed with command you want to run:
 
