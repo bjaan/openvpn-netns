@@ -19,7 +19,7 @@ Once the **openvpn-netns** script is installed, and the OpenVPN service is start
 2. set-up a Linux network namespace called _vpn_
 3. move the _tun0_ network adapter into the _vpn_ network namespace
 4. configure DSN servers for the _vpn_ network namespace
-5. optionally, create a virtual network adapter _macvlan0_ ([MACVLAN in Bridge mode](https://developers.redhat.com/blog/2018/10/22/introduction-to-linux-interfaces-for-virtual-networking#macvlan)) between the pythical LAN _eth0_ network adapter and the apps and services that need to access the Internet through the VPN tunnel.  It is will have a seperate IP-address which is accessible on the local network (Note: `ping` will not work on this IP-address, it will only have the exposed ports open, and there is no ICMP Echo Requests service running either).
+5. optionally, create a virtual network adapter _macvlan0_ ([MACVLAN in Bridge mode](https://developers.redhat.com/blog/2018/10/22/introduction-to-linux-interfaces-for-virtual-networking#macvlan)) between the physical LAN _eth0_ network adapter and the apps and services that need to access the Internet through the VPN tunnel.  It is will have a separate IP-address which is accessible on the local network (Note: `ping` will not work on this IP-address, it will only have the exposed ports open, and there is no ICMP Echo Requests service running either).
 
 When the OpenVPN service is stopped, the script will:
 1. close the active VPN connection and remove the _tun0_ network adapter
@@ -47,7 +47,7 @@ When the OpenVPN service is stopped, the script will:
 
    These commands will create it under `/etc/openvpn/credentials.txt`
    ```sh
-   echo "CHANGE TO YOUR USERNAME" >> /etc/openvpn/credentials.txt
+   echo "CHANGE TO YOUR USERNAME" > /etc/openvpn/credentials.txt
    echo "CHANGE TO YOUR PASSWORD" >> /etc/openvpn/credentials.txt
    ```
 
@@ -79,7 +79,7 @@ When the OpenVPN service is stopped, the script will:
 
 8. Copy the `netns.sh` to `/etc/openvpn/` and run `chmod +x /etc/openvpn/netns.sh` to allow it be executed.
 
-9. To enable the optional _macvlan0_ network adapter, which allows to access exposed ports on services in the _vpn_ network namespace, though a separate IP-address, neet to modify the `netns.sh` file.  Uncomment the following lines, by removing the first # and space after it:
+9. To enable the optional _macvlan0_ network adapter, which allows to access exposed ports on services in the _vpn_ network namespace, though a separate IP-address, the `netns.sh` file needs to be modified.  Uncomment the following lines, by removing the first # and space after it:
 
 ```sh
 # echo "add macvlan0 interface and link it to eth0 interface as bridge"
