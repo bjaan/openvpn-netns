@@ -41,7 +41,7 @@ When the OpenVPN service is stopped, the script will:
 
 
    Download, e.g. with `wget`, and save the selected configuration under the `/etc/openvpn/` folder.
-   Make sure that the name configuration file ends with the `.conf`, e.g. `/etc/openvpn/ch-zur.prod.surfshark.com_udp.conf`, that will allow OpenVPN to find it automatically, however we will still use point directly to it in the next steps.
+   Make sure that the name of the configuration file ends with the `.conf`, e.g. `/etc/openvpn/ch-zur.prod.surfshark.com_udp.conf`, that will allow OpenVPN to find it automatically, however we will still point to the configuration file directly in the next steps.
 
 4. Create a credentials file for OpenVPN, according to your VPN provider's instructions; for Surfshark this can be set-up on the _Credentials_ tab on [the same page](https://my.surfshark.com/vpn/manual-setup/main).
 
@@ -51,7 +51,7 @@ When the OpenVPN service is stopped, the script will:
    echo "CHANGE TO YOUR PASSWORD" >> /etc/openvpn/credentials.txt
    ```
 
-5. Next. point to the OpenVPN configuration file in OpenVPN service file.  Typically in a systemd-based Linux, the service file for the OpenVPN service is located is `/etc/systemd/system/openvpn.service`.
+5. Next, point to the OpenVPN configuration file in OpenVPN service file.  Typically in a systemd-based Linux, the service file for the OpenVPN service is located is `/etc/systemd/system/openvpn.service`.
 
    We need to update the `ExecStart` line in the `[Service]` section to make sure the OpenVPN service will use the selected configuration file.  E.g. for `/etc/openvpn/ch-zur.prod.surfshark.com_udp.conf` this would become:
 
