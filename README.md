@@ -59,11 +59,11 @@ When the OpenVPN service is stopped, the script will:
    ExecStart=/usr/sbin/openvpn --config /etc/openvpn/ch-zur.prod.surfshark.com_udp.conf
    ```
 
-6. Test if your VPN connection is working by starting the OpenVPN service: e.g. `sudo systemctl start openvpn`.  The whole host Internet access should now go through the VPN; see if the `traceroute www.google.com` command lists the VPN provider's domain names. Stop the service before proceeding `sudo systemctl start openvpn`
+6. Test if your VPN connection is working by starting the OpenVPN service: e.g. `sudo systemctl start openvpn`.  The whole host Internet access should now go through the VPN; see if the `traceroute www.google.com` command lists the VPN provider's domain names. Stop the service before proceeding `sudo systemctl stop openvpn`
 
 ### b. Setting up the OpenVPN network namespace
 
-7. Reconfigure OpenVPN service file further, so that it has to permissions to set-up network namespace (the same file as in step 5 above) further with these lines in the `[Service]` section:
+7. Reconfigure OpenVPN service file further, so that it has to permissions to set-up network namespace (i.e. the same file as referenced in step 5 above) further with these lines in the `[Service]` section:
 
    ```ini
    CapabilityBoundingSet=CAP_CHOWN CAP_DAC_OVERRIDE CAP_DAC_READ_SEARCH CAP_FOWNER CAP_FSETID CAP_KILL CAP_SETGID CAP_SETUID CAP_SETPCAP CAP_LINUX_IMMUTABLE CAP_NET_BIND_SERVICE
@@ -77,9 +77,9 @@ When the OpenVPN service is stopped, the script will:
 
    Note: the complete _openvpn.service_ file is in this repository.
 
-8. Copy the `netns.sh` to `/etc/openvpn/` and run `chmod +x /etc/openvpn/netns.sh` to allow it be executed.
+8. Copy the `netns.sh` to `/etc/openvpn/` directory and run `chmod +x /etc/openvpn/netns.sh` to allow it be executed.
 
-9. To enable the optional _macvlan0_ network adapter, which allows to access exposed ports on services in the _vpn_ network namespace, though a separate IP-address, the `netns.sh` file needs to be modified.  Uncomment the following lines, by removing the first # and space after it:
+9. To enable the optional _macvlan0_ network adapter, which exposes ports from services in the _vpn_ network namespace on the LAN, though its separate IP-address, the `netns.sh` file needs to be modified.  Uncomment the following lines, by removing the first # and space after it:
 
 ```sh
 # echo "add macvlan0 interface and link it to eth0 interface as bridge"
@@ -125,7 +125,7 @@ ip netns exec vpn ip addr add 192.168.1.236/24 dev macvlan0
 
 ## Running an app or service in the network namespace
 
-Note: the current version requires you to run as `root`. Suggestions on how run as regular user are welcome!
+Note: the current version requires you to run as `root`. Suggestions on how run as a regular user are welcome!
 
 You need to `sudo` a call to `ip netns exec vpn`, which is then completed with command you want to run:
 
