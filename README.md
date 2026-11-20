@@ -298,7 +298,7 @@ services:
 
     volumes:
       - /opt/transmission:/config
-      - /var/run/netns:/var/run/netns
+      - /var/run/netns:/var/run/netns:rslave
 
     restart: unless-stopped
 ```
@@ -308,7 +308,7 @@ Key settings:
 | Setting              | Purpose                                  |
 | -------------------- | ---------------------------------------- |
 | `network_mode: host` | allows container networking through host |
-| `/var/run/netns`     | exposes namespaces to container          |
+| `/var/run/netns`     | exposes network namespaces to container, i.e. the host's `vpn`: `rslave` ensures that mount changes from the host, including network namespace mounts, propagate into the container without allowing mount changes inside the container to propagate back to the host. |
 | `privileged: true`   | allows `ip netns exec`                   |
 
 ## Starting Applications in the Namespace
